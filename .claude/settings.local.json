@@ -11,7 +11,13 @@
       "Bash(taskkill:*)",
       "Bash(timeout /t 2 /nobreak)",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git branch:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "Bash(npm start)",
+      "Bash(npm run electron:*)"
     ]
   }
 }

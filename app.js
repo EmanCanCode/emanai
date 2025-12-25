@@ -80,6 +80,57 @@ async function saveConversation(data) {
   }
 }
 
+// Try to find an existing conversation that matches the provided messages.
+// Returns { id, exact } when found, or null when not. Prefer exact match;
+// otherwise return a conversation whose messages are a prefix of the provided messages
+// so we can merge/append instead of creating duplicates.
+async function findConversationByMessages(messages) {
+  try {
+    const files = await fs.readdir(CONVO_DIR);
+    const target = messages || [];
+
+    // exact match first
+    for (const file of files) {
+      if (!file.endsWith(".json")) continue;
+      try {
+        const content = await fs.readFile(path.join(CONVO_DIR, file), "utf-8");
+        const convo = JSON.parse(content);
+        const existing = convo.messages || [];
+        if (JSON.stringify(existing) === JSON.stringify(target))
+          return { id: convo.id, exact: true };
+      } catch {}
+    }
+
+    // prefix match (choose the longest prefix)
+    let best = { id: null, len: -1 };
+    for (const file of files) {
+      if (!file.endsWith(".json")) continue;
+      try {
+        const content = await fs.readFile(path.join(CONVO_DIR, file), "utf-8");
+        const convo = JSON.parse(content);
+        const existing = convo.messages || [];
+        if (!existing.length) continue;
+        if (existing.length <= target.length) {
+          let isPrefix = true;
+          for (let i = 0; i < existing.length; i++) {
+            if (JSON.stringify(existing[i]) !== JSON.stringify(target[i])) {
+              isPrefix = false;
+              break;
+            }
+          }
+          if (isPrefix && existing.length > best.len)
+            best = { id: convo.id, len: existing.length };
+        }
+      } catch {}
+    }
+
+    if (best.id) return { id: best.id, exact: false };
+  } catch (err) {
+    // ignore
+  }
+  return null;
+}
+
 async function deleteConversation(id) {
   try {
     const filePath = path.join(CONVO_DIR, `${id}.json`);
@@ -177,13 +228,15 @@ async function streamOllamaChat(messages, model, res) {
   // Helper to strip thinking tags and extract content
   function processContent(text) {
     // Remove <<THINKING>>...</THINKING>> tags and their content
-    let processed = text.replace(/<<THINKING>>[\s\S]*?<\/THINKING>>/g, '');
+    let processed = text.replace(/<<THINKING>>[\s\S]*?<\/THINKING>>/g, "");
 
     // Remove <<RESPONSE>> and <</RESPONSE>> tags but keep the content
-    processed = processed.replace(/<<RESPONSE>>/g, '').replace(/<\/RESPONSE>>/g, '');
+    processed = processed
+      .replace(/<<RESPONSE>>/g, "")
+      .replace(/<\/RESPONSE>>/g, "");
 
     // Also handle <think> tags some models use
-    processed = processed.replace(/<think>[\s\S]*?<\/think>/g, '');
+    processed = processed.replace(/<think>[\s\S]*?<\/think>/g, "");
 
     return processed;
   }
@@ -375,10 +428,56 @@ function startServer() {
         return;
       }
 
-      // POST /api/conversations - Create new conversation
+      // POST /api/conversations - Create new conversation (dedupe by messages)
       if (u.pathname === "/api/conversations" && req.method === "POST") {
         const body = await readBody(req);
         if (body) {
+          // If messages are provided, try to find an existing conversation with identical messages
+          if (body.messages && Array.isArray(body.messages)) {
+            const existing = await findConversationByMessages(body.messages);
+            if (existing) {
+              if (existing.exact) {
+                res.writeHead(200, {
+                  "Content-Type": "application/json",
+                  ...corsHeaders,
+                });
+                res.end(
+                  JSON.stringify({
+                    success: true,
+                    id: existing.id,
+                    duplicate: true,
+                  })
+                );
+                return;
+              } else {
+                // existing conversation is a prefix -> merge/update it
+                try {
+                  const convo = (await loadConversation(existing.id)) || {
+                    id: existing.id,
+                  };
+                  convo.messages = body.messages;
+                  if (body.title) convo.title = body.title;
+                  convo.updated = new Date().toISOString();
+                  await saveConversation(convo);
+                  res.writeHead(200, {
+                    "Content-Type": "application/json",
+                    ...corsHeaders,
+                  });
+                  res.end(
+                    JSON.stringify({
+                      success: true,
+                      id: existing.id,
+                      merged: true,
+                    })
+                  );
+                  return;
+                } catch (err) {
+                  // fall through and create new if merge fails
+                }
+              }
+            }
+          }
+
           if (!body.id) body.id = randomUUID();
           if (!body.created) body.created = new Date().toISOString();
           body.updated = new Date().toISOString();
@@ -440,7 +539,10 @@ function startServer() {
 
         try {
           if (!clientDisconnected) {
-            console.log("[CHAT] Starting stream with model:", body.model || OLLAMA_MODEL);
+            console.log(
+              "[CHAT] Starting stream with model:",
+              body.model || OLLAMA_MODEL
+            );
             await streamOllamaChat(body.messages, body.model, res);
             if (!clientDisconnected && !res.writableEnded) {
               console.log("[CHAT] Stream completed successfully");
@@ -474,8 +576,9 @@ function startServer() {
     }
   });
 
-  server.listen(port, () => {
-    console.log(`\nEmanAI server listening on http://localhost:${port}/`);
+  const bindHost = process.env.BIND_HOST || "127.0.0.1";
+  server.listen(port, bindHost, () => {
+    console.log(`\nEmanAI server listening on http://${bindHost}:${port}/`);
     console.log(`Ollama server: ${OLLAMA_BASE_URL}`);
     console.log(`Default model: ${OLLAMA_MODEL}\n`);
   });
@@ -516,7 +619,9 @@ process.on("SIGINT", () => {
     try {
       if (!streamTracker.res.writableEnded) {
         streamTracker.res.write(`event: error\n`);
-        streamTracker.res.write(`data: ${JSON.stringify({ message: "Server shutting down" })}\n\n`);
+        streamTracker.res.write(
+          `data: ${JSON.stringify({ message: "Server shutting down" })}\n\n`
+        );
         streamTracker.res.end();
       }
     } catch {}

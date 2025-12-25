@@ -4,13 +4,19 @@
   "description": "EmanAI - AI Chat Desktop Application",
   "main": "electron-main.js",
   "scripts": {
-    "start": "node app.js",
+    "start": "electron .",
     "electron": "electron .",
     "pack": "electron-builder --dir",
     "dist": "electron-builder --win",
-    "dist:portable": "electron-builder --win portable"
+    "dist:portable": "electron-builder --win portable",
+    "make-icon": "node ./scripts/make-icon.js"
   },
-  "keywords": ["ai", "chat", "ollama", "desktop"],
+  "keywords": [
+    "ai",
+    "chat",
+    "ollama",
+    "desktop"
+  ],
   "author": "EmanAI",
   "license": "ISC",
   "dependencies": {
@@ -18,7 +24,9 @@
   },
   "devDependencies": {
     "electron": "^28.0.0",
-    "electron-builder": "^24.9.1"
+    "electron-builder": "^24.9.1",
+    "png-to-ico": "^1.0.7",
+    "sharp": "^0.32.6"
   },
   "build": {
     "appId": "com.emanai.desktop",
@@ -30,11 +38,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "icon.ico"
@@ -49,7 +61,6 @@
     "files": [
       "**/*",
       "!dist",
-      "!node_modules",
       "!.git",
       "!.env",
       "!*.md"
@@ -58,7 +69,9 @@
       {
         "from": "convo-history",
         "to": "convo-history",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ]
   }
