@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EmanAI - Professional Chat Interface</title>
+  <!-- Prism.js for Syntax Highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #0b1220;
+      --bg-secondary: #1a1f2e;
+      --bg-tertiary: #252b3b;
+      --bg-hover: #2d3648;
+      --border-color: #2d3648;
+      --text-primary: #e6eef8;
+      --text-secondary: #9ba3b4;
+      --text-muted: #6b7280;
+      --accent-blue: #5b9ff9;
+      --accent-hover: #4a8de8;
+      --user-msg-bg: #2d4a6e;
+      --assistant-msg-bg: #1e2735;
+      --thinking-bg: #1a1f2c;
+      --thinking-text: #7a7f8e;
+      --error-color: #ef4444;
+      --success-color: #10b981;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .app-container {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* Sidebar */
+    #sidebar {
+      width: 280px;
+      background-color: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #sidebar-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    #sidebar-header h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, var(--accent-blue), #7c3aed);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    #new-chat-btn {
+      width: 100%;
+      padding: 12px 16px;
+      background-color: var(--accent-blue);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    #new-chat-btn:hover {
+      background-color: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+
+    #conversations-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+
+    .conversation-item {
+      padding: 12px;
+      margin-bottom: 6px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .conversation-item:hover {
+      background-color: var(--bg-hover);
+    }
+
+    .conversation-item.active {
+      background-color: var(--bg-tertiary);
+    }
+
+    .conversation-title {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .conversation-meta {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .delete-btn {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background-color: var(--error-color);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 11px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .conversation-item:hover .delete-btn {
+      opacity: 1;
+    }
+
+    /* Main Chat Area */
+    #chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #chat-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border-color);
+      background-color: var(--bg-secondary);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    #model-select {
+      padding: 8px 12px;
+      background-color: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      outline: none;
+      min-width: 200px;
+    }
+
+    #model-select:hover {
+      border-color: var(--accent-blue);
+    }
+
+    #conversation-title {
+      flex: 1;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    #thinking-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 8px 12px;
+      border-radius: 6px;
+      transition: background-color 0.2s ease;
+      user-select: none;
+    }
+
+    #thinking-toggle:hover {
+      background-color: var(--bg-tertiary);
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      background-color: var(--bg-tertiary);
+      border-radius: 10px;
+      transition: background-color 0.2s ease;
+    }
+
+    .toggle-switch.active {
+      background-color: var(--accent-blue);
+    }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      background-color: white;
+      border-radius: 50%;
+      transition: transform 0.2s ease;
+    }
+
+    .toggle-switch.active::after {
+      transform: translateX(16px);
+    }
+
+    /* Messages Container */
+    #messages-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      scroll-behavior: smooth;
+    }
+
+    .message {
+      margin-bottom: 32px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid rgba(45, 54, 72, 0.3);
+    }
+
+    .message:last-child {
+      border-bottom: none;
+    }
+
+    .message.new {
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .message-header {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .message-header svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .message-content {
+      padding: 16px;
+      border-radius: 12px;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .message.user .message-content {
+      background-color: var(--user-msg-bg);
+      margin-left: 20%;
+    }
+
+    .message.assistant .message-content {
+      background-color: var(--assistant-msg-bg);
+      margin-right: 20%;
+    }
+
+    .thinking-indicator {
+      background-color: var(--thinking-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      color: var(--thinking-text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .thinking-indicator.active {
+      border-color: var(--accent-blue);
+    }
+
+    .thinking-icon {
+      width: 16px;
+      height: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .thinking-icon svg {
+      width: 100%;
+      height: 100%;
+      animation: rotate 2s linear infinite;
+    }
+
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .thinking-section {
+      background-color: var(--thinking-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      color: var(--thinking-text);
+    }
+
+    .thinking-section .thinking-header {
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .thinking-section .thinking-header:hover {
+      color: var(--text-primary);
+    }
+
+    .thinking-section .thinking-content {
+      display: none;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-color);
+      white-space: pre-wrap;
+      font-style: normal;
+      line-height: 1.5;
+    }
+
+    .thinking-section.expanded .thinking-content {
+      display: block;
+    }
+
+    .thinking-section .toggle-icon {
+      transition: transform 0.2s ease;
+      font-size: 10px;
+    }
+
+    .thinking-section.expanded .toggle-icon {
+      transform: rotate(90deg);
+    }
+
+    /* Markdown Styles */
+    .message-content p {
+      margin-bottom: 12px;
+    }
+
+    .message-content p:last-child {
+      margin-bottom: 0;
+    }
+
+    .message-content code {
+      background-color: var(--bg-tertiary);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+    }
+
+    .message-content pre {
+      background-color: var(--bg-tertiary);
+      padding: 0;
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 12px 0;
+      position: relative;
+    }
+
+    .code-block-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background-color: rgba(0, 0, 0, 0.2);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .code-block-language {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+
+    .copy-code-btn {
+      padding: 4px 12px;
+      background-color: var(--bg-hover);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .copy-code-btn:hover {
+      background-color: var(--accent-blue);
+      border-color: var(--accent-blue);
+    }
+
+    .copy-code-btn.copied {
+      background-color: var(--success-color);
+      border-color: var(--success-color);
+    }
+
+    .code-block-content {
+      padding: 16px;
+      overflow-x: auto;
+    }
+
+    .message-content pre code {
+      background: none;
+      padding: 0;
+    }
+
+    .message-content strong {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .message-content em {
+      font-style: italic;
+    }
+
+    .message-content a {
+      color: var(--accent-blue);
+      text-decoration: none;
+    }
+
+    .message-content a:hover {
+      text-decoration: underline;
+    }
+
+    .message-content ul, .message-content ol {
+      margin-left: 24px;
+      margin-bottom: 12px;
+    }
+
+    .message-content li {
+      margin-bottom: 4px;
+    }
+
+    .message-content h1, .message-content h2, .message-content h3 {
+      margin-top: 16px;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .message-content h1 { font-size: 20px; }
+    .message-content h2 { font-size: 18px; }
+    .message-content h3 { font-size: 16px; }
+
+    /* Input Area */
+    #input-area {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border-color);
+      background-color: var(--bg-secondary);
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+    }
+
+    #user-input {
+      flex: 1;
+      padding: 12px 16px;
+      background-color: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 15px;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      min-height: 48px;
+      max-height: 200px;
+      transition: border-color 0.2s ease;
+    }
+
+    #user-input:focus {
+      border-color: var(--accent-blue);
+    }
+
+    #send-btn, #stop-btn {
+      padding: 12px 24px;
+      background-color: var(--accent-blue);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    #send-btn:hover, #stop-btn:hover {
+      background-color: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+
+    #send-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    #stop-btn {
+      background-color: var(--error-color);
+    }
+
+    #stop-btn:hover {
+      background-color: #dc2626;
+    }
+
+    /* Loading & Empty States */
+    .loading-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-secondary);
+      font-size: 14px;
+      padding: 12px;
+    }
+
+    .loading-dots {
+      display: inline-flex;
+      gap: 4px;
+    }
+
+    .loading-dots span {
+      width: 6px;
+      height: 6px;
+      background-color: var(--accent-blue);
+      border-radius: 50%;
+      animation: pulse 1.4s infinite;
+    }
+
+    .loading-dots span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .loading-dots span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes pulse {
+      0%, 80%, 100% {
+        opacity: 0.3;
+        transform: scale(0.8);
+      }
+      40% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-secondary);
+      text-align: center;
+      padding: 24px;
+    }
+
+    .empty-state h2 {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background-color: var(--bg-secondary);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background-color: var(--bg-tertiary);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background-color: var(--bg-hover);
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      #sidebar {
+        position: absolute;
+        left: -280px;
+        top: 0;
+        bottom: 0;
+        z-index: 1000;
+        transition: left 0.3s ease;
+      }
+
+      #sidebar.open {
+        left: 0;
+      }
+
+      .message.user .message-content,
+      .message.assistant .message-content {
+        margin-left: 0;
+        margin-right: 0;
+      }
+    }
+
+    /* Toast Notifications */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background-color: var(--bg-tertiary);
+      color: var(--text-primary);
+      padding: 12px 20px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      animation: slideIn 0.3s ease;
+      z-index: 2000;
+    }
+
+    .toast.error {
+      border-color: var(--error-color);
+      background-color: rgba(239, 68, 68, 0.1);
+    }
+
+    .toast.success {
+      border-color: var(--success-color);
+      background-color: rgba(16, 185, 129, 0.1);
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(100px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    /* Typing Cursor Animation */
+    .typing-cursor {
+      display: inline-block;
+      width: 2px;
+      height: 1em;
+      background-color: var(--accent-blue);
+      margin-left: 2px;
+      animation: blink 1s infinite;
+      vertical-align: text-bottom;
+    }
+
+    @keyframes blink {
+      0%, 49% {
+        opacity: 1;
+      }
+      50%, 100% {
+        opacity: 0;
+      }
+    }
+
+    /* Loading Spinner */
+    .thinking-spinner {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-secondary);
+      font-size: 14px;
+      padding: 12px 16px;
+      background-color: var(--thinking-bg);
+      border-radius: 8px;
+      margin-top: 8px;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border-color);
+      border-top-color: var(--accent-blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside id="sidebar">
+      <div id="sidebar-header">
+        <h1>EmanAI</h1>
+        <button id="new-chat-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px;">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          <span>New Chat</span>
+        </button>
+      </div>
+      <div id="conversations-list">
+        <div class="loading-indicator">
+          <span>Loading conversations...</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Chat Area -->
+    <main id="chat-area">
+      <header id="chat-header">
+        <select id="model-select">
+          <option>Loading models...</option>
+        </select>
+        <div id="conversation-title">New Conversation</div>
+        <div id="thinking-toggle">
+          <span>Show Thinking</span>
+          <div class="toggle-switch active"></div>
+        </div>
+      </header>
+
+      <div id="messages-container">
+        <div class="empty-state">
+          <h2>Welcome to EmanAI</h2>
+          <p>Start a conversation by typing a message below.</p>
+        </div>
+      </div>
+
+      <div id="input-area">
+        <textarea id="user-input" placeholder="Message EmanAI..." rows="1"></textarea>
+        <button id="send-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;">
+            <path d="m22 2-7 20-4-9-9-4Z"/>
+            <path d="M22 2 11 13"/>
+          </svg>
+          <span>Send</span>
+        </button>
+        <button id="stop-btn" style="display: none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+          </svg>
+          <span>Stop</span>
+        </button>
+      </div>
+    </main>
+  </div>
+
+  <!-- Prism.js Core and Languages -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+
+  <script>
+    // Application State
+    const state = {
+      currentConversation: null,
+      conversations: [],
+      availableModels: [],
+      selectedModel: null,
+      isStreaming: false,
+      streamController: null,
+      systemPrompt: "You are EmanAI, a helpful assistant. Respond naturally in conversational text. When providing code, use markdown code blocks with the language specified (```language). Do NOT use <<THINKING>>, <</THINKING>>, <<RESPONSE>>, <</RESPONSE>>, or <think> tags. Just respond directly and naturally.",
+      showThinking: true
+    };
+
+    // DOM Elements
+    const els = {
+      conversationsList: document.getElementById('conversations-list'),
+      messagesContainer: document.getElementById('messages-container'),
+      userInput: document.getElementById('user-input'),
+      sendBtn: document.getElementById('send-btn'),
+      stopBtn: document.getElementById('stop-btn'),
+      newChatBtn: document.getElementById('new-chat-btn'),
+      modelSelect: document.getElementById('model-select'),
+      conversationTitle: document.getElementById('conversation-title'),
+      thinkingToggle: document.getElementById('thinking-toggle')
+    };
+
+    // API Helper Functions
+    async function fetchModels() {
+      try {
+        console.log('[FETCH] Fetching models from /api/models...');
+        const res = await fetch('/api/models');
+        console.log('[FETCH] Models response status:', res.status);
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+
+        const data = await res.json();
+        console.log('[FETCH] Models data:', data);
+        return data.models || [];
+      } catch (err) {
+        console.error('[FETCH] Failed to load models:', err);
+        showToast('Failed to load models: ' + err.message, 'error');
+        return [];
+      }
+    }
+
+    async function fetchConversations() {
+      try {
+        const res = await fetch('/api/conversations');
+        const data = await res.json();
+        return data.conversations || [];
+      } catch (err) {
+        showToast('Failed to load conversations', 'error');
+        return [];
+      }
+    }
+
+    async function fetchConversation(id) {
+      try {
+        const res = await fetch(`/api/conversations/${id}`);
+        if (!res.ok) return null;
+        return await res.json();
+      } catch (err) {
+        showToast('Failed to load conversation', 'error');
+        return null;
+      }
+    }
+
+    async function saveConversationAPI(data) {
+      try {
+        const method = data.id && state.conversations.find(c => c.id === data.id) ? 'PUT' : 'POST';
+        const url = method === 'PUT' ? `/api/conversations/${data.id}` : '/api/conversations';
+
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        const result = await res.json();
+        return result.success || result.id;
+      } catch (err) {
+        showToast('Failed to save conversation', 'error');
+        return false;
+      }
+    }
+
+    async function deleteConversationAPI(id) {
+      try {
+        const res = await fetch(`/api/conversations/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        return data.success;
+      } catch (err) {
+        showToast('Failed to delete conversation', 'error');
+        return false;
+      }
+    }
+
+    // UI Rendering Functions
+    function renderConversationList() {
+      if (state.conversations.length === 0) {
+        els.conversationsList.innerHTML = '<div class="loading-indicator"><span>No conversations yet</span></div>';
+        return;
+      }
+
+      els.conversationsList.innerHTML = state.conversations.map(convo => `
+        <div class="conversation-item ${state.currentConversation?.id === convo.id ? 'active' : ''}" data-id="${convo.id}">
+          <div class="conversation-title">${escapeHtml(convo.title || 'Untitled')}</div>
+          <div class="conversation-meta">${formatTimestamp(convo.updated)}</div>
+          <button class="delete-btn" data-id="${convo.id}">Delete</button>
+        </div>
+      `).join('');
+
+      // Attach click handlers
+      document.querySelectorAll('.conversation-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+          if (!e.target.classList.contains('delete-btn')) {
+            loadConversation(item.dataset.id);
+          }
+        });
+      });
+
+      document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (confirm('Delete this conversation?')) {
+            await deleteConversation(btn.dataset.id);
+          }
+        });
+      });
+    }
+
+    function renderMessages(markNewMessages = false) {
+      if (!state.currentConversation || state.currentConversation.messages.length === 0) {
+        els.messagesContainer.innerHTML = `
+          <div class="empty-state">
+            <h2>Welcome to EmanAI</h2>
+            <p>Start a conversation by typing a message below.</p>
+          </div>
+        `;
+        return;
+      }
+
+      els.messagesContainer.innerHTML = state.currentConversation.messages
+        .filter(msg => msg.role !== 'system')
+        .map((msg, idx) => renderMessage(msg, markNewMessages && idx >= state.currentConversation.messages.length - 2))
+        .join('');
+
+      // Auto-scroll to bottom
+      els.messagesContainer.scrollTop = els.messagesContainer.scrollHeight;
+
+      // Attach thinking section toggles
+      document.querySelectorAll('.thinking-section').forEach(section => {
+        section.addEventListener('click', () => {
+          section.classList.toggle('expanded');
+        });
+      });
+    }
+
+    function updateStreamingMessage(messageIndex, content, thinking = '') {
+      const messages = Array.from(els.messagesContainer.querySelectorAll('.message'));
+      const filteredIndex = state.currentConversation.messages
+        .filter(msg => msg.role !== 'system')
+        .findIndex((msg, idx) => idx === messageIndex);
+
+      if (filteredIndex >= 0 && filteredIndex < messages.length) {
+        const messageEl = messages[filteredIndex];
+        const contentEl = messageEl.querySelector('.message-content');
+
+        if (contentEl) {
+          // If no content yet, show spinner
+          if (!content || content.trim() === '') {
+            contentEl.innerHTML = '<div class="thinking-spinner"><div class="spinner"></div><span>Thinking...</span></div>';
+          } else {
+            // Add typing cursor during streaming
+            contentEl.innerHTML = parseMarkdown(content) + '<span class="typing-cursor"></span>';
+          }
+        }
+
+        // Update or create thinking section based on state
+        let thinkingSection = messageEl.querySelector('.thinking-section, .thinking-indicator');
+        if (thinking) {
+          if (state.showThinking) {
+            // Update thinking section content
+            if (!thinkingSection || !thinkingSection.classList.contains('thinking-section')) {
+              // Re-render to get the proper thinking section
+              const msg = state.currentConversation.messages[messageIndex];
+              const newHtml = renderMessage(msg, false);
+              const temp = document.createElement('div');
+              temp.innerHTML = newHtml;
+              messageEl.replaceWith(temp.firstElementChild);
+              thinkingSection = temp.querySelector('.thinking-section');
+            }
+            const thinkingContent = messageEl.querySelector('.thinking-content');
+            if (thinkingContent) {
+              thinkingContent.textContent = thinking;
+            }
+          } else {
+            // Update compact indicator
+            if (!thinkingSection || !thinkingSection.classList.contains('thinking-indicator')) {
+              const msg = state.currentConversation.messages[messageIndex];
+              const newHtml = renderMessage(msg, false);
+              const temp = document.createElement('div');
+              temp.innerHTML = newHtml;
+              messageEl.replaceWith(temp.firstElementChild);
+            }
+          }
+        }
+
+        // Auto-scroll to bottom
+        els.messagesContainer.scrollTop = els.messagesContainer.scrollHeight;
+      }
+    }
+
+    function renderMessage(msg, isNew = false) {
+      const isUser = msg.role === 'user';
+      const role = isUser ? 'You' : 'EmanAI';
+
+      const userIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+      const aiIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="m9 16 3-3 3 3"/><path d="M8 12h.01"/><path d="M16 12h.01"/><path d="M6 8V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"/></svg>`;
+      const icon = isUser ? userIcon : aiIcon;
+
+      let thinkingHtml = '';
+      if (msg.thinking) {
+        if (state.showThinking) {
+          // Show expandable thinking section
+          thinkingHtml = `
+            <div class="thinking-section">
+              <div class="thinking-header">
+                <span class="toggle-icon">▶</span>
+                <svg class="thinking-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                  <circle cx="12" cy="17" r="0.5" fill="currentColor"/>
+                </svg>
+                <span>Thinking</span>
+              </div>
+              <div class="thinking-content">${escapeHtml(msg.thinking)}</div>
+            </div>
+          `;
+        } else {
+          // Show just a compact thinking indicator
+          thinkingHtml = `
+            <div class="thinking-indicator">
+              <svg class="thinking-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                <circle cx="12" cy="17" r="0.5" fill="currentColor"/>
+              </svg>
+              <span>Used thinking (${msg.thinking.length} chars)</span>
+            </div>
+          `;
+        }
+      }
+
+      return `
+        <div class="message ${msg.role}${isNew ? ' new' : ''}">
+          <div class="message-header">
+            ${icon}
+            <span>${role}</span>
+          </div>
+          ${thinkingHtml}
+          <div class="message-content">${parseMarkdown(msg.content)}</div>
+        </div>
+      `;
+    }
+
+    // Conversation Management
+    async function createNewChat() {
+      if (state.isStreaming) {
+        showToast('Please wait for the current response to complete', 'error');
+        return;
+      }
+
+      state.currentConversation = {
+        id: null,
+        title: 'New Conversation',
+        model: state.selectedModel,
+        created: new Date().toISOString(),
+        updated: new Date().toISOString(),
+        messages: []
+      };
+
+      els.conversationTitle.textContent = 'New Conversation';
+      renderMessages();
+      renderConversationList();
+      els.userInput.focus();
+    }
+
+    async function loadConversation(id) {
+      if (state.isStreaming) {
+        showToast('Please wait for the current response to complete', 'error');
+        return;
+      }
+
+      const convo = await fetchConversation(id);
+      if (convo) {
+        state.currentConversation = convo;
+        state.selectedModel = convo.model;
+        els.modelSelect.value = convo.model;
+        els.conversationTitle.textContent = convo.title;
+        renderMessages();
+        renderConversationList();
+      }
+    }
+
+    async function saveConversation() {
+      if (!state.currentConversation) return;
+
+      // Auto-generate title from first user message if untitled
+      if ((!state.currentConversation.title || state.currentConversation.title === 'New Conversation')
+          && state.currentConversation.messages.length > 0) {
+        const firstUserMsg = state.currentConversation.messages.find(m => m.role === 'user');
+        if (firstUserMsg) {
+          state.currentConversation.title = firstUserMsg.content.slice(0, 50) +
+            (firstUserMsg.content.length > 50 ? '...' : '');
+          els.conversationTitle.textContent = state.currentConversation.title;
+        }
+      }
+
+      state.currentConversation.updated = new Date().toISOString();
+      const result = await saveConversationAPI(state.currentConversation);
+
+      if (result) {
+        // Refresh conversation list
+        state.conversations = await fetchConversations();
+        renderConversationList();
+      }
+    }
+
+    async function deleteConversation(id) {
+      const success = await deleteConversationAPI(id);
+      if (success) {
+        state.conversations = state.conversations.filter(c => c.id !== id);
+        if (state.currentConversation?.id === id) {
+          createNewChat();
+        }
+        renderConversationList();
+        showToast('Conversation deleted', 'success');
+      }
+    }
+
+    // Message Sending & Streaming
+    async function sendMessage() {
+      const text = els.userInput.value.trim();
+      if (!text || state.isStreaming) return;
+
+      if (!state.currentConversation) {
+        createNewChat();
+      }
+
+      // Add user message
+      const userMsg = {
+        role: 'user',
+        content: text,
+        timestamp: new Date().toISOString()
+      };
+      state.currentConversation.messages.push(userMsg);
+
+      // Create assistant placeholder
+      const assistantMsg = {
+        role: 'assistant',
+        content: '',
+        thinking: '',
+        timestamp: new Date().toISOString()
+      };
+      state.currentConversation.messages.push(assistantMsg);
+
+      els.userInput.value = '';
+      els.userInput.style.height = 'auto';
+      renderMessages(true);
+
+      // Show initial spinner
+      const assistantMsgIndex = state.currentConversation.messages.length - 1;
+      updateStreamingMessage(assistantMsgIndex, '', '');
+
+      // Update UI state
+      state.isStreaming = true;
+      els.sendBtn.disabled = true;
+      els.sendBtn.style.display = 'none';
+      els.stopBtn.style.display = 'block';
+
+      // Build message history (exclude the placeholder assistant message)
+      const messages = [
+        { role: 'system', content: state.systemPrompt },
+        ...state.currentConversation.messages.slice(0, -1)
+      ];
+
+      try {
+        console.log('[CLIENT] Starting chat request...');
+        state.streamController = new AbortController();
+
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: state.selectedModel,
+            messages: messages
+          }),
+          signal: state.streamController.signal
+        });
+
+        console.log('[CLIENT] Response received, status:', res.status);
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+        // Parse SSE stream
+        console.log('[CLIENT] Starting to read stream...');
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let currentEvent = '';
+        let chunkCount = 0;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            console.log('[CLIENT] Stream ended, total chunks:', chunkCount);
+            break;
+          }
+
+          chunkCount++;
+          if (chunkCount % 10 === 0) {
+            console.log('[CLIENT] Received', chunkCount, 'chunks');
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (!line.trim() || line.startsWith(':')) continue;
+
+            if (line.startsWith('event:')) {
+              currentEvent = line.slice(6).trim();
+              continue;
+            }
+
+            if (line.startsWith('data:')) {
+              try {
+                const data = JSON.parse(line.slice(5).trim());
+
+                if (data.text) {
+                  if (currentEvent === 'thinking') {
+                    assistantMsg.thinking += data.text;
+                  } else {
+                    assistantMsg.content += data.text;
+                  }
+                  // Update only the streaming message instead of re-rendering everything
+                  updateStreamingMessage(assistantMsgIndex, assistantMsg.content, assistantMsg.thinking);
+                }
+
+                if (data.message) {
+                  if (data.message.includes('error')) {
+                    showToast(data.message, 'error');
+                  }
+                }
+              } catch (e) {
+                console.warn('[CLIENT] Parse error:', e.message, 'Line:', line);
+              }
+            }
+          }
+        }
+
+        console.log('[CLIENT] Saving conversation...');
+        // Save conversation after successful response
+        await saveConversation();
+
+        // Remove typing cursor when done
+        const allMessages = els.messagesContainer.querySelectorAll('.message');
+        allMessages.forEach(msg => {
+          const cursor = msg.querySelector('.typing-cursor');
+          if (cursor) cursor.remove();
+        });
+
+      } catch (err) {
+        console.error('[CLIENT] Error:', err.name, err.message);
+        if (err.name !== 'AbortError') {
+          showToast('Failed to send message: ' + err.message, 'error');
+          // Remove the placeholder assistant message on error
+          state.currentConversation.messages.pop();
+          renderMessages();
+        }
+      } finally {
+        console.log('[CLIENT] Streaming finished');
+        state.isStreaming = false;
+        state.streamController = null;
+        els.sendBtn.disabled = false;
+        els.sendBtn.style.display = 'block';
+        els.stopBtn.style.display = 'none';
+      }
+    }
+
+    function stopStreaming() {
+      if (state.streamController) {
+        state.streamController.abort();
+        state.isStreaming = false;
+        els.sendBtn.disabled = false;
+        els.sendBtn.style.display = 'block';
+        els.stopBtn.style.display = 'none';
+      }
+    }
+
+    // Markdown Parser (Simple)
+    function parseMarkdown(text) {
+      if (!text) return '';
+
+      let html = escapeHtml(text);
+
+      // Code blocks with header and copy button
+      html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+        const language = lang || 'plaintext';
+        const trimmedCode = code.trim();
+        // Apply Prism highlighting
+        let highlightedCode = trimmedCode;
+        if (typeof Prism !== 'undefined' && Prism.languages[language]) {
+          highlightedCode = Prism.highlight(trimmedCode, Prism.languages[language], language);
+        }
+        return `<pre><div class="code-block-header"><span class="code-block-language">${language}</span><button class="copy-code-btn" onclick="copyCode(this, event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>Copy</span></button></div><div class="code-block-content"><code class="language-${language}">${highlightedCode}</code></div></pre>`;
+      });
+
+      // Inline code
+      html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+      // Bold
+      html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+      // Italic
+      html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+      // Links
+      html = html.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank">$1</a>');
+
+      // Headers
+      html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+      html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+      html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+
+      // Lists
+      html = html.replace(/^\* (.+)$/gm, '<li>$1</li>');
+      html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+      html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+
+      // Paragraphs
+      html = html.split('\n\n').map(p => {
+        if (p.startsWith('<') || !p.trim()) return p;
+        return `<p>${p}</p>`;
+      }).join('\n');
+
+      return html;
+    }
+
+    // Copy Code Function
+    function copyCode(button, event) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const pre = button.closest('pre');
+      const codeBlock = pre.querySelector('code');
+
+      // Get the raw text content, stripping all HTML tags added by Prism
+      let code = codeBlock.innerText || codeBlock.textContent;
+
+      // Fallback: if still seems truncated, try getting from original data
+      if (!code || code.length < 50) {
+        // Try to get the whole pre content
+        const contentDiv = pre.querySelector('.code-block-content');
+        if (contentDiv) {
+          code = contentDiv.innerText || contentDiv.textContent;
+        }
+      }
+
+      navigator.clipboard.writeText(code).then(() => {
+        const span = button.querySelector('span');
+        const originalText = span.textContent;
+
+        button.classList.add('copied');
+        span.textContent = 'Copied!';
+
+        setTimeout(() => {
+          button.classList.remove('copied');
+          span.textContent = originalText;
+        }, 2000);
+      }).catch(err => {
+        showToast('Failed to copy code', 'error');
+      });
+    }
+
+    // Make copyCode globally accessible
+    window.copyCode = copyCode;
+
+    // Utility Functions
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function formatTimestamp(isoString) {
+      const date = new Date(isoString);
+      const now = new Date();
+      const diff = now - date;
+
+      const seconds = Math.floor(diff / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+
+      if (days > 7) {
+        return date.toLocaleDateString();
+      } else if (days > 0) {
+        return `${days} day${days > 1 ? 's' : ''} ago`;
+      } else if (hours > 0) {
+        return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+      } else if (minutes > 0) {
+        return `${minutes} min${minutes > 1 ? 's' : ''} ago`;
+      } else {
+        return 'Just now';
+      }
+    }
+
+    function showToast(message, type = 'info') {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // Event Listeners
+    els.newChatBtn.addEventListener('click', createNewChat);
+    els.sendBtn.addEventListener('click', sendMessage);
+    els.stopBtn.addEventListener('click', stopStreaming);
+
+    els.userInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    els.userInput.addEventListener('input', () => {
+      els.userInput.style.height = 'auto';
+      els.userInput.style.height = Math.min(els.userInput.scrollHeight, 200) + 'px';
+    });
+
+    els.modelSelect.addEventListener('change', (e) => {
+      state.selectedModel = e.target.value;
+      if (state.currentConversation) {
+        state.currentConversation.model = state.selectedModel;
+      }
+    });
+
+    els.thinkingToggle.addEventListener('click', () => {
+      state.showThinking = !state.showThinking;
+      const toggleSwitch = els.thinkingToggle.querySelector('.toggle-switch');
+      toggleSwitch.classList.toggle('active', state.showThinking);
+      renderMessages();
+    });
+
+    // Initialization
+    async function initApp() {
+      // Load models
+      const models = await fetchModels();
+      state.availableModels = models;
+
+      if (models.length > 0) {
+        els.modelSelect.innerHTML = models.map(m =>
+          `<option value="${m.name}">${m.name}</option>`
+        ).join('');
+        state.selectedModel = models[0].name;
+      } else {
+        els.modelSelect.innerHTML = '<option>No models available</option>';
+      }
+
+      // Load conversations
+      state.conversations = await fetchConversations();
+      renderConversationList();
+
+      // Create initial new chat
+      createNewChat();
+
+      console.log('EmanAI initialized successfully!');
+    }
+
+    // Start the app
+    initApp();
+  </script>
+</body>
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculator</title>
+    <style>
+        body {
+            background-color: #333;
+            color: #fff;
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .calculator {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .display {
+            width: 300px;
+            text-align: right;
+            padding: 15px;
+            font-size: 24px;
+            background-color: #444;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        button {
+            padding: 20px;
+            font-size: 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .btn-num {
+            background-color: #555;
+            color: #fff;
+        }
+
+        .btn-op {
+            background-color: #777;
+            color: #fff;
+        }
+
+        .btn-clear {
+            background-color: #e2431e;
+            color: #fff;
+        }
+
+        .btn-equal {
+            background-color: #38c172;
+            color: #fff;
+        }
+
+        .btn-sci {
+            background-color: #b072ff;
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="calculator">
+        <input type="text" id="display" class="display" disabled>
+        <div class="buttons">
+            <button onclick="append('1')" class="btn-num">1</button>
+            <button onclick="append('2')" class="btn-num">2</button>
+            <button onclick="append('3')" class="btn-num">3</button>
+            <button onclick="clearDisplay()" class="btn-clear">C</button>
+
+            <button onclick="append('4')" class="btn-num">4</button>
+            <button onclick="append('5')" class="btn-num">5</button>
+            <button onclick="append('6')" class="btn-num">6</button>
+            <button onclick="append('')" class="btn-op"></button>
+
+            <button onclick="append('7')" class="btn-num">7</button>
+            <button onclick="append('8')" class="btn-num">8</button>
+            <button onclick="append('9')" class="btn-num">9</button>
+            <button onclick="append('-')" class="btn-op">-</button>
+
+            <button onclick="append('0')" class="btn-num">0</button>
+            <button onclick="append('.')">.</button>
+            <button onclick="calculate()" class="btn-equal">=</button>
+            <button onclick="append('+')" class="btn-op">+</button>
+
+            <button onclick="switchMode()" class="btn-sci">Sci</button>
+        </div>
+    </div>
+
+    <script>
+        let display = document.getElementById('display');
+        let currentInput = '';
+        let currentOperator = null;
+        let firstOperand = null;
+
+        function append(value) {
+            if (value === '.' && currentInput.includes('.')) return;
+            currentInput += value;
+            updateDisplay();
+        }
+
+        function clearDisplay() {
+            currentInput = '';
+            currentOperator = null;
+            firstOperand = null;
+            updateDisplay();
+        }
+
+        function calculate() {
+            let result;
+            const secondOperand = parseFloat(currentInput);
+
+            if (firstOperand === null || currentOperator === null) return;
+
+            switch (currentOperator) {
+                case '+':
+                    result = firstOperand + secondOperand;
+                    break;
+                case '-':
+                    result = firstOperand - secondOperand;
+                    break;
+                case '*':
+                    result = firstOperand * secondOperand;
+                    break;
+                case '/':
+                    if (secondOperand === 0) {
+                        alert('Error: Division by zero');
+                        return;
+                    }
+                    result = firstOperand / secondOperand;
+                    break;
+                default:
+                    return;
+            }
+
+            display.value = result.toString();
+            currentInput = result.toString();
+            currentOperator = null;
+            firstOperand = null;
+        }
+
+        function updateDisplay() {
+            if (currentInput === '') {
+                display.value = '0';
+            } else {
+                display.value = currentInput;
+            }
+        }
+
+        function switchMode() {
+            // Placeholder for switching between modes
+            alert('Switching to scientific mode not implemented yet.');
+        }
+
+        document.addEventListener('keydown', function (event) {
+            const key = event.key;
+
+            if (!isNaN(key)) {
+                append(key);
+            } else if (key === '.') {
+                append('.');
+            } else if (key === 'Enter' || key === '=') {
+                calculate();
+            } else if (key === 'Backspace') {
+                currentInput = currentInput.slice(0, -1);
+                updateDisplay();
+            } else {
+                switch (key) {
+                    case '+':
+                    case '-':
+                    case '*':
+                    case '/':
+                        currentOperator = key;
+                        firstOperand = parseFloat(currentInput);
+                        currentInput = '';
+                        break;
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

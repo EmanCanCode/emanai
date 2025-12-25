@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node app.js:*)",
+      "Bash(npm install)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill /F /PID 35916)",
+      "Bash(taskkill //F //PID 35916)",
+      "Bash(curl:*)",
+      "Bash(taskkill:*)",
+      "Bash(timeout /t 2 /nobreak)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

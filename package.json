@@ -1,0 +1,65 @@
+{
+  "name": "emanai",
+  "version": "1.0.0",
+  "description": "EmanAI - AI Chat Desktop Application",
+  "main": "electron-main.js",
+  "scripts": {
+    "start": "node app.js",
+    "electron": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --win",
+    "dist:portable": "electron-builder --win portable"
+  },
+  "keywords": ["ai", "chat", "ollama", "desktop"],
+  "author": "EmanAI",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.1.4"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.emanai.desktop",
+    "productName": "EmanAI",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "EmanAI"
+    },
+    "files": [
+      "**/*",
+      "!dist",
+      "!node_modules",
+      "!.git",
+      "!.env",
+      "!*.md"
+    ],
+    "extraFiles": [
+      {
+        "from": "convo-history",
+        "to": "convo-history",
+        "filter": ["**/*"]
+      }
+    ]
+  }
+}
